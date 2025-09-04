@@ -1,4 +1,4 @@
-#include <webkit2/webkit2.h>
+#include <webkit/webkit.h>
 
 #include "browser-commands.h"
 #include "browser-web-view.h"
@@ -8,8 +8,6 @@ extern GPtrArray *greeter_browsers;
 
 typedef struct {
   guint64 id;
-  GtkBox *main_box;
-  GtkMenuBar *menu_bar;
 } BrowserPrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE(Browser, browser, GTK_TYPE_APPLICATION_WINDOW)
@@ -18,7 +16,7 @@ typedef enum {
   PROP_ID = 1,
   PROP_MONITOR,
   PROP_DEBUG_MODE,
-  PROP_IS_PRIMARY,
+  PROP_IS_VALID,
   N_PROPERTIES,
 } BrowserProperty;
 
@@ -32,13 +30,18 @@ browser_dispose(GObject *gobject)
 static void
 browser_finalize(GObject *gobject)
 {
+  // It is possible that object methods might be invoked
+  // after dispose is run and before finalize runs
+  //
+  // Widgets in GTK 4 are treated like any other objects
+  // - their parent widget holds a reference on them,
+  // and GTK holds a reference on toplevel windows.
+  // gtk_window_destroy() will drop the reference on the toplevel window,
+  // and cause the whole widget hierarchy to be finalized
+  // unless there are other references that keep widgets alive.
+  gtk_window_destroy(GTK_WINDOW(gobject));
+  g_ptr_array_remove(greeter_browsers, gobject);
   G_OBJECT_CLASS(browser_parent_class)->finalize(gobject);
-}
-static void
-browser_destroy(GtkWidget *self)
-{
-  GTK_WIDGET_CLASS(browser_parent_class)->destroy(GTK_WIDGET(self));
-  g_ptr_array_remove(greeter_browsers, self);
 }
 
 static const GActionEntry win_entries[] = {
@@ -70,17 +73,7 @@ static const GActionEntry win_debug_entries[] = {
 void
 browser_show_menu_bar(Browser *browser, gboolean show)
 {
-  BrowserPrivate *priv = browser_get_instance_private(browser);
-  if (!GTK_IS_WIDGET(priv->menu_bar))
-    return;
-  GtkWidget *parent = gtk_widget_get_parent(GTK_WIDGET(priv->menu_bar));
-  if (show && parent == NULL) {
-    gtk_box_pack_start(priv->main_box, GTK_WIDGET(priv->menu_bar), false, true, 0);
-    g_object_unref(priv->menu_bar);
-  } else if (parent != NULL) {
-    g_object_ref(priv->menu_bar);
-    gtk_container_remove(GTK_CONTAINER(priv->main_box), GTK_WIDGET(priv->menu_bar));
-  }
+  gtk_application_window_set_show_menubar(GTK_APPLICATION_WINDOW(browser), show);
 }
 
 static guint64
@@ -101,10 +94,16 @@ browser_initiate_metadata(Browser *self)
   BrowserPrivate *priv = browser_get_instance_private(self);
 
   self->meta.id = priv->id;
-  self->meta.is_primary = self->is_primary;
+  self->meta.is_valid = self->is_valid;
 
-  gtk_window_get_position(GTK_WINDOW(self), &self->meta.geometry.x, &self->meta.geometry.y);
-  gtk_window_get_size(GTK_WINDOW(self), &self->meta.geometry.width, &self->meta.geometry.height);
+  // a number of GtkWindow APIs that were X11-specific have been removed.
+  // includes gtk_window_set_position()
+  // Some windowing systems, such as Wayland, do not support a global coordinate system,
+  // and thus the position of the window will always be (0, 0)
+  // gtk_window_get_position(GTK_WINDOW(self), &self->meta.geometry.x, &self->meta.geometry.y);
+  self->meta.geometry.x = 0;
+  self->meta.geometry.y = 0;
+  gtk_window_get_default_size(GTK_WINDOW(self), &self->meta.geometry.width, &self->meta.geometry.height);
 }
 
 void
@@ -138,6 +137,8 @@ browser_constructed(GObject *object)
   Browser *browser = BROWSER_WINDOW(object);
   BrowserPrivate *priv = browser_get_instance_private(browser);
 
+  gtk_widget_set_cursor_from_name(GTK_WIDGET(object), "default");
+
   GdkRectangle geometry;
   gdk_monitor_get_geometry(browser->monitor, &geometry);
 
@@ -146,9 +147,8 @@ browser_constructed(GObject *object)
   GtkCssProvider *provider = gtk_css_provider_new();
   gtk_css_provider_load_from_resource(provider, "/com/github/jezerm/sea_greeter/resources/style.css");
   GdkDisplay *display = gdk_monitor_get_display(browser->monitor);
-  GdkScreen *screen = gdk_display_get_default_screen(display);
-  gtk_style_context_add_provider_for_screen(
-      screen,
+  gtk_style_context_add_provider_for_display(
+      display,
       GTK_STYLE_PROVIDER(provider),
       GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 
@@ -162,14 +162,8 @@ browser_constructed(GObject *object)
 
   if (browser->debug_mode) {
     g_action_map_add_action_entries(G_ACTION_MAP(browser), win_debug_entries, G_N_ELEMENTS(win_debug_entries), browser);
+    gtk_application_window_set_show_menubar(GTK_APPLICATION_WINDOW(browser), true);
     browser_web_view_set_developer_tools(browser->web_view, true);
-
-    GtkBuilder *builder = gtk_builder_new_from_resource("/com/github/jezerm/sea_greeter/resources/menu_bar.ui");
-    GMenuModel *menu = G_MENU_MODEL(gtk_builder_get_object(builder, "menu"));
-    priv->menu_bar = GTK_MENU_BAR(gtk_menu_bar_new_from_model(menu));
-    gtk_box_pack_start(priv->main_box, GTK_WIDGET(priv->menu_bar), false, true, 0);
-
-    g_object_unref(builder);
   } else {
     browser_web_view_set_developer_tools(browser->web_view, false);
     gtk_window_fullscreen(GTK_WINDOW(browser));
@@ -188,8 +182,8 @@ browser_set_property(GObject *object, guint property_id, const GValue *value, GP
     case PROP_DEBUG_MODE:
       self->debug_mode = g_value_get_boolean(value);
       break;
-    case PROP_IS_PRIMARY:
-      self->is_primary = g_value_get_boolean(value);
+    case PROP_IS_VALID:
+      self->is_valid = g_value_get_boolean(value);
       break;
     default:
       break;
@@ -212,8 +206,8 @@ browser_get_property(GObject *object, guint property_id, GValue *value, GParamSp
     case PROP_DEBUG_MODE:
       g_value_set_boolean(value, self->debug_mode);
       break;
-    case PROP_IS_PRIMARY:
-      g_value_set_boolean(value, self->is_primary);
+    case PROP_IS_VALID:
+      g_value_set_boolean(value, self->is_valid);
       break;
     default:
       break;
@@ -224,7 +218,6 @@ static void
 browser_class_init(BrowserClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS(klass);
-  GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(klass);
 
   object_class->set_property = browser_set_property;
   object_class->get_property = browser_get_property;
@@ -233,8 +226,7 @@ browser_class_init(BrowserClass *klass)
   object_class->finalize = browser_finalize;
   object_class->constructed = browser_constructed;
 
-  widget_class->destroy = browser_destroy;
-
+  // TODO: remove browser destory
   browser_properties[PROP_ID] = g_param_spec_int("id", "ID", "The window internal id", 0, INT_MAX, 0, G_PARAM_READABLE);
 
   browser_properties[PROP_MONITOR] = g_param_spec_object(
@@ -251,10 +243,10 @@ browser_class_init(BrowserClass *klass)
       false,
       G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE);
 
-  browser_properties[PROP_IS_PRIMARY] = g_param_spec_boolean(
-      "is_primary",
-      "IsPrimary",
-      "Whether the browser is in a primary monitor or not",
+  browser_properties[PROP_IS_VALID] = g_param_spec_boolean(
+      "is_valid",
+      "IsValid",
+      "Whether the browser is in a valid monitor or not",
       true,
       G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE);
 
@@ -264,21 +256,10 @@ browser_class_init(BrowserClass *klass)
 static void
 browser_init(Browser *self)
 {
-  BrowserPrivate *priv = browser_get_instance_private(self);
-
   self->web_view = browser_web_view_new();
-  self->is_primary = true;
+  self->is_valid = true;
 
-  priv->menu_bar = NULL;
-  priv->main_box = GTK_BOX(gtk_box_new(GTK_ORIENTATION_VERTICAL, 0));
-  GtkBox *box = GTK_BOX(gtk_box_new(GTK_ORIENTATION_VERTICAL, 0));
-  gtk_widget_set_name(GTK_WIDGET(box), "box_container");
-
-  /*gtk_box_pack_start(priv->main_box, GTK_WIDGET(priv->menu_bar), false, true, 0);*/
-  gtk_box_pack_start(box, GTK_WIDGET(self->web_view), true, true, 0);
-  gtk_box_pack_end(priv->main_box, GTK_WIDGET(box), true, true, 0);
-
-  gtk_container_add(GTK_CONTAINER(self), GTK_WIDGET(priv->main_box));
+  gtk_window_set_child(GTK_WINDOW(self), GTK_WIDGET(self->web_view));
 }
 
 Browser *
@@ -288,7 +269,7 @@ browser_new(GtkApplication *app, GdkMonitor *monitor)
   return browser;
 }
 Browser *
-browser_new_full(GtkApplication *app, GdkMonitor *monitor, gboolean debug_mode, gboolean is_primary)
+browser_new_full(GtkApplication *app, GdkMonitor *monitor, gboolean debug_mode, gboolean is_valid)
 {
   Browser *browser = g_object_new(
       BROWSER_TYPE,
@@ -298,8 +279,8 @@ browser_new_full(GtkApplication *app, GdkMonitor *monitor, gboolean debug_mode, 
       monitor,
       "debug_mode",
       debug_mode,
-      "is_primary",
-      is_primary,
+      "is_valid",
+      is_valid,
       NULL);
   return browser;
 }

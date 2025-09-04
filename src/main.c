@@ -1,7 +1,7 @@
 #include <gtk/gtk.h>
 #include <locale.h>
 #include <stdlib.h>
-#include <webkit2/webkit2.h>
+#include <webkit/webkit.h>
 
 #include "config.h"
 #include "logger.h"
@@ -14,18 +14,15 @@
 #include "bridge/theme_utils.h"
 #include "browser.h"
 
-static GdkWindow *root_window;
-static GdkDisplay *default_display;
-
 extern GreeterConfig *greeter_config;
 
 GPtrArray *greeter_browsers = NULL;
 
 /*
- * Initialize web extensions
+ * Initialize web process extensions
  */
 static void
-initialize_web_extensions(WebKitWebContext *context, gpointer user_data)
+initialize_web_process_extensions(WebKitWebContext *context, gpointer user_data)
 {
   (void) user_data;
 
@@ -36,15 +33,15 @@ initialize_web_extensions(WebKitWebContext *context, gpointer user_data)
 
   logger_debug("Extension initialized");
 
-  webkit_web_context_set_web_extensions_directory(context, WEB_EXTENSIONS_DIR);
-  webkit_web_context_set_web_extensions_initialization_user_data(context, g_steal_pointer(&data));
+  webkit_web_context_set_web_process_extensions_directory(context, WEB_EXTENSIONS_DIR);
+  webkit_web_context_set_web_process_extensions_initialization_user_data(context, g_steal_pointer(&data));
 }
 
 /*
  * Set keybinding accelerators
  */
 static void
-set_keybindings(void)
+set_keybindings(GtkApplication *app)
 {
   const struct accelerator {
     const gchar *action;
@@ -77,8 +74,6 @@ set_keybindings(void)
     { NULL, { NULL } },
   };
 
-  GApplication *app = g_application_get_default();
-
   int accel_count = G_N_ELEMENTS(accels);
   for (int i = 0; i < accel_count; i++) {
     if (accels[i].action == NULL)
@@ -104,9 +99,7 @@ app_quit_cb(GSimpleAction *action, GVariant *parameter, gpointer user_data)
 {
   (void) action;
   (void) parameter;
-  (void) user_data;
-  GApplication *app = g_application_get_default();
-  g_application_quit(app);
+  g_application_quit(user_data);
 }
 
 /*
@@ -132,11 +125,6 @@ app_activate_cb(GtkApplication *app, gpointer user_data)
 {
   (void) user_data;
 
-  root_window = gdk_get_default_root_window();
-  default_display = gdk_display_get_default();
-
-  gdk_window_set_cursor(root_window, gdk_cursor_new_for_display(default_display, GDK_LEFT_PTR));
-
   LightDM_initialize();
   GreeterConfig_initialize();
   ThemeUtils_initialize();
@@ -144,34 +132,33 @@ app_activate_cb(GtkApplication *app, gpointer user_data)
 
   g_signal_connect(
       webkit_web_context_get_default(),
-      "initialize-web-extensions",
-      G_CALLBACK(initialize_web_extensions),
+      "initialize-web-process-extensions",
+      G_CALLBACK(initialize_web_process_extensions),
       NULL);
 
   greeter_browsers = g_ptr_array_new();
 
   GdkDisplay *display = gdk_display_get_default();
-  int n_monitors = gdk_display_get_n_monitors(display);
+  GListModel *monitors = gdk_display_get_monitors(display);
+
+  guint n_monitors = g_list_model_get_n_items(monitors);
   gboolean debug_mode = greeter_config->greeter->debug_mode;
 
   // n_monitors++;
-  for (int i = 0; i < n_monitors; i++) {
-    GdkMonitor *monitor = gdk_display_get_monitor(display, i);
-    gboolean is_primary = gdk_monitor_is_primary(monitor);
+  for (guint i = 0; i < n_monitors; i++) {
+    GdkMonitor *monitor = g_list_model_get_item(monitors, i);
+    gboolean is_valid = gdk_monitor_is_valid(monitor);
     if (n_monitors == 1)
-      is_primary = true;
+      is_valid = true;
     // GdkMonitor *monitor = gdk_display_get_monitor(display, 0);
     // gboolean is_primary = i == 0;
 
-    Browser *browser = browser_new_full(app, monitor, debug_mode, is_primary);
+    Browser *browser = browser_new_full(app, monitor, debug_mode, is_valid);
     g_ptr_array_add(greeter_browsers, browser);
 
     load_theme(browser);
   }
   browser_set_overall_boundary(greeter_browsers);
-
-  initialize_actions(app);
-  set_keybindings();
 }
 
 /*
@@ -181,8 +168,15 @@ app_activate_cb(GtkApplication *app, gpointer user_data)
 static void
 app_startup_cb(GtkApplication *app, gpointer user_data)
 {
-  (void) app;
   (void) user_data;
+  initialize_actions(app);
+  set_keybindings(app);
+
+  GtkBuilder *builder = gtk_builder_new_from_resource("/com/github/jezerm/sea_greeter/resources/menu_bar.ui");
+  GMenuModel *menu = G_MENU_MODEL(gtk_builder_get_object(builder, "menu"));
+  gtk_application_set_menubar(app, menu);
+
+  g_object_unref(builder);
 }
 
 static void
@@ -214,8 +208,9 @@ g_application_parse_args(gint *argc, gchar ***argv)
   };
 
   g_option_context_add_main_entries(context, entries, NULL);
-  GOptionGroup *gtk_group = gtk_get_option_group(false);
-  g_option_context_add_group(context, gtk_group);
+  GOptionGroup *option_group
+      = g_option_group_new("sea-greeter", "sea-greeter description", "sea-greeter help_descritpion", NULL, NULL);
+  g_option_context_add_group(context, option_group);
   g_option_context_set_help_enabled(context, true);
 
   g_option_context_parse(context, argc, argv, NULL);
@@ -276,6 +271,22 @@ g_application_parse_args(gint *argc, gchar ***argv)
   load_theme_config();
 }
 
+// static void
+// toplevels_items_changed_cb(GListModel *list, guint position, guint removed, guint added, gpointer user_data)
+// {
+//   (void) position;
+//   (void) removed;
+//   (void) user_data;
+//
+//   if (added > 0) {
+//     // g_warning("toplevels::items-changed: new toplevel added");
+//     for (guint i = 0; i < g_list_model_get_n_items(list); i++) {
+//       GdkToplevel *toplevel = g_list_model_get_item(list, i);
+//       gtk_widget_set_cursor_from_name(GTK_WIDGET(toplevel), "default");
+//     }
+//   }
+// }
+
 int
 main(int argc, char **argv)
 {
@@ -288,6 +299,10 @@ main(int argc, char **argv)
 
   g_signal_connect(app, "activate", G_CALLBACK(app_activate_cb), NULL);
   g_signal_connect(app, "startup", G_CALLBACK(app_startup_cb), NULL);
+
+  // gtk_window_get_toplevels();
+  // GListModel *toplevels = gtk_window_get_toplevels();
+  // g_signal_connect(toplevels, "items-changed", G_CALLBACK(toplevels_items_changed_cb), NULL);
 
   g_application_parse_args(&argc, &argv);
 

@@ -2,8 +2,8 @@
 #define LIGHTDM_EXTENSION_H 1
 
 #include <glib-object.h>
-#include <webkit2/webkit-web-extension.h>
+#include <webkit/webkit-web-process-extension.h>
 
-void web_page_initialize(WebKitWebExtension *extension);
+void web_page_initialize(WebKitWebProcessExtension *extension);
 
 #endif

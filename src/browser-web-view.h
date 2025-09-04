@@ -2,7 +2,7 @@
 #define BROWSER_WEB_VIEW_H 1
 
 #include <gtk/gtk.h>
-#include <webkit2/webkit2.h>
+#include <webkit/webkit.h>
 
 G_BEGIN_DECLS
 

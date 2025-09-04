@@ -3,7 +3,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <webkit2/webkit2.h>
+#include <webkit/webkit.h>
 #include <yaml.h>
 
 #include "logger.h"
@@ -295,7 +295,7 @@ load_theme(Browser *browser)
 
   char *theme = NULL;
 
-  if (browser->is_primary) {
+  if (browser->is_valid) {
     theme = g_strdup(primary_html);
   } else {
     theme = g_strdup(secondary_html);

@@ -3,7 +3,7 @@
 
 #include "browser-web-view.h"
 #include <lightdm-gobject-1/lightdm.h>
-#include <webkit2/webkit2.h>
+#include <webkit/webkit.h>
 
 void GreeterComm_initialize(void);
 void GreeterComm_destroy(void);

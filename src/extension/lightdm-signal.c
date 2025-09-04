@@ -1,10 +1,8 @@
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
 
 #include <jsc/jsc.h>
-#include <webkit2/webkit-web-extension.h>
+#include <webkit/webkit-web-process-extension.h>
 
 #include "bridge/lightdm-objects.h"
 #include "bridge/utils.h"
@@ -138,7 +136,7 @@ LightDM_signal_initialize(
     WebKitScriptWorld *world,
     WebKitWebPage *web_page,
     WebKitFrame *web_frame,
-    WebKitWebExtension *extension)
+    WebKitWebProcessExtension *extension)
 {
   (void) web_page;
   (void) extension;

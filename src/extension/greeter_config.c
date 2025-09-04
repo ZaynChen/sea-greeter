@@ -1,18 +1,12 @@
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
 
 #include <lightdm-gobject-1/lightdm.h>
-#include <webkit2/webkit-web-extension.h>
-
-#include "logger.h"
-#include "settings.h"
+#include <webkit/webkit-web-process-extension.h>
 
 #include "bridge/lightdm-objects.h"
 #include "bridge/utils.h"
 
-#include "extension/lightdm-signal.h"
 #include "utils/ipc-renderer.h"
 #include "utils/utils.h"
 
@@ -88,7 +82,7 @@ GreeterConfig_initialize(
     WebKitScriptWorld *world,
     WebKitWebPage *web_page,
     WebKitFrame *web_frame,
-    WebKitWebExtension *extension)
+    WebKitWebProcessExtension *extension)
 {
   (void) extension;
   WebPage = web_page;

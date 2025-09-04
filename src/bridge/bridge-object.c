@@ -1,5 +1,5 @@
 #include <jsc/jsc.h>
-#include <webkit2/webkit2.h>
+#include <webkit/webkit.h>
 
 #include "bridge/bridge-object.h"
 #include "bridge/utils.h"
