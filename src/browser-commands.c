@@ -1,4 +1,4 @@
-#include <webkit2/webkit2.h>
+#include <webkit/webkit.h>
 
 #include "browser-commands.h"
 #include "browser.h"
@@ -114,6 +114,23 @@ browser_redo_cb(GSimpleAction *action, GVariant *parameter, gpointer user_data)
   webkit_web_view_execute_editing_command(WEBKIT_WEB_VIEW(browser->web_view), WEBKIT_EDITING_COMMAND_REDO);
 }
 
+static void
+copy_text(GtkWidget *widget)
+{
+  GtkEditable *editable = GTK_EDITABLE(widget);
+
+  // Initialize a GValue with the contents of the widget
+  GValue value = G_VALUE_INIT;
+  g_value_init(&value, G_TYPE_STRING);
+  g_value_set_string(&value, gtk_editable_get_text(editable));
+
+  // Store the value in the clipboard object
+  GdkClipboard *clipboard = gtk_widget_get_clipboard(widget);
+  gdk_clipboard_set_value(clipboard, &value);
+
+  g_value_unset(&value);
+}
+
 void
 browser_copy_cb(GSimpleAction *action, GVariant *parameter, gpointer user_data)
 {
@@ -123,11 +140,30 @@ browser_copy_cb(GSimpleAction *action, GVariant *parameter, gpointer user_data)
   GtkWidget *focused = gtk_window_get_focus(GTK_WINDOW(browser));
 
   if (GTK_IS_EDITABLE(focused)) {
-    gtk_editable_copy_clipboard(GTK_EDITABLE(focused));
+    copy_text(focused);
   } else {
     webkit_web_view_execute_editing_command(WEBKIT_WEB_VIEW(browser->web_view), WEBKIT_EDITING_COMMAND_COPY);
   }
 }
+
+static void
+cut_text(GtkWidget *widget)
+{
+  GtkEditable *editable = GTK_EDITABLE(widget);
+
+  // Initialize a GValue with the contents of the widget
+  GValue value = G_VALUE_INIT;
+  g_value_init(&value, G_TYPE_STRING);
+  g_value_set_string(&value, gtk_editable_get_text(editable));
+  gtk_editable_set_text(editable, "");
+
+  // Store the value in the clipboard object
+  GdkClipboard *clipboard = gtk_widget_get_clipboard(widget);
+  gdk_clipboard_set_value(clipboard, &value);
+
+  g_value_unset(&value);
+}
+
 void
 browser_cut_cb(GSimpleAction *action, GVariant *parameter, gpointer user_data)
 {
@@ -137,11 +173,36 @@ browser_cut_cb(GSimpleAction *action, GVariant *parameter, gpointer user_data)
   GtkWidget *focused = gtk_window_get_focus(GTK_WINDOW(browser));
 
   if (GTK_IS_EDITABLE(focused)) {
-    gtk_editable_cut_clipboard(GTK_EDITABLE(focused));
+    cut_text(focused);
   } else {
     webkit_web_view_execute_editing_command(WEBKIT_WEB_VIEW(browser->web_view), WEBKIT_EDITING_COMMAND_CUT);
   }
 }
+
+static void
+paste_text(GtkWidget *widget)
+{
+  GtkEditable *editable = GTK_EDITABLE(widget);
+
+  // Initialize a GValue to receive text
+  GValue value = G_VALUE_INIT;
+  g_value_init(&value, G_TYPE_STRING);
+
+  // Get the content provider for the clipboard, and ask it for text
+  GdkClipboard *clipboard = gtk_widget_get_clipboard(widget);
+  GdkContentProvider *provider = gdk_clipboard_get_content(clipboard);
+
+  // If the content provider does not contain text, we are not interested
+  if (!gdk_content_provider_get_value(provider, &value, NULL))
+    return;
+
+  const char *str = g_value_get_string(&value);
+
+  gtk_editable_set_text(editable, str);
+
+  g_value_unset(&value);
+}
+
 void
 browser_paste_cb(GSimpleAction *action, GVariant *parameter, gpointer user_data)
 {
@@ -151,7 +212,7 @@ browser_paste_cb(GSimpleAction *action, GVariant *parameter, gpointer user_data)
   GtkWidget *focused = gtk_window_get_focus(GTK_WINDOW(browser));
 
   if (GTK_IS_EDITABLE(focused)) {
-    gtk_editable_paste_clipboard(GTK_EDITABLE(focused));
+    paste_text(focused);
   } else {
     webkit_web_view_execute_editing_command(WEBKIT_WEB_VIEW(browser->web_view), WEBKIT_EDITING_COMMAND_PASTE);
   }
@@ -165,7 +226,7 @@ browser_paste_plain_cb(GSimpleAction *action, GVariant *parameter, gpointer user
   GtkWidget *focused = gtk_window_get_focus(GTK_WINDOW(browser));
 
   if (GTK_IS_EDITABLE(focused)) {
-    gtk_editable_paste_clipboard(GTK_EDITABLE(focused));
+    paste_text(focused);
   } else {
     webkit_web_view_execute_editing_command(
         WEBKIT_WEB_VIEW(browser->web_view),
@@ -209,10 +270,8 @@ browser_fullscreen_cb(GSimpleAction *action, GVariant *parameter, gpointer user_
   (void) action;
   (void) parameter;
   Browser *browser = user_data;
-  GdkWindow *window = gtk_widget_get_window(GTK_WIDGET(browser));
-  GdkWindowState state = gdk_window_get_state(window);
 
-  if (state & GDK_WINDOW_STATE_FULLSCREEN) {
+  if (gtk_window_is_fullscreen(GTK_WINDOW(browser))) {
     gtk_window_unfullscreen(GTK_WINDOW(browser));
     browser_show_menu_bar(browser, true);
   } else {
@@ -235,5 +294,5 @@ browser_minimize_cb(GSimpleAction *action, GVariant *parameter, gpointer user_da
   (void) action;
   (void) parameter;
   Browser *browser = user_data;
-  gtk_window_iconify(GTK_WINDOW(browser));
+  gtk_window_minimize(GTK_WINDOW(browser));
 }

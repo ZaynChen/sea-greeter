@@ -1,11 +1,10 @@
 #include <gio/gio.h>
 #include <glib-object.h>
 #include <glib.h>
-#include <string.h>
 #include <unistd.h>
 
 #include <jsc/jsc.h>
-#include <webkit2/webkit2.h>
+#include <webkit/webkit.h>
 
 #include "utils/utils.h"
 

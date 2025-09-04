@@ -1,12 +1,10 @@
 #include <glib-object.h>
 #include <glib.h>
 #include <stdbool.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
 
-#include <webkit2/webkit-web-extension.h>
+#include <webkit/webkit-web-process-extension.h>
 
 #include "utils/utils.h"
 

@@ -1,10 +1,6 @@
 #ifndef LOGGER_H
 #define LOGGER_H 1
 #include <glib.h>
-#include <locale.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
 #include <unistd.h>
 
 #define logger_raw(type, message, ...)                                                  \
@@ -20,17 +16,8 @@
     g_free(filename);                                                                   \
   }
 
-#define logger_debug(message, ...)              \
-  {                                             \
-    logger_raw("DEBUG", message, ##__VA_ARGS__) \
-  }
-#define logger_error(message, ...)              \
-  {                                             \
-    logger_raw("ERROR", message, ##__VA_ARGS__) \
-  }
-#define logger_warn(message, ...)              \
-  {                                            \
-    logger_raw("WARN", message, ##__VA_ARGS__) \
-  }
+#define logger_debug(message, ...) { logger_raw("DEBUG", message, ##__VA_ARGS__) }
+#define logger_error(message, ...) { logger_raw("ERROR", message, ##__VA_ARGS__) }
+#define logger_warn(message, ...) { logger_raw("WARN", message, ##__VA_ARGS__) }
 
 #endif

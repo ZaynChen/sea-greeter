@@ -1,4 +1,4 @@
-#include <webkit2/webkit-web-extension.h>
+#include <webkit/webkit-web-process-extension.h>
 
 #include "extension/greeter_comm.h"
 #include "extension/greeter_config.h"
@@ -6,7 +6,7 @@
 #include "extension/lightdm.h"
 #include "extension/theme_utils.h"
 
-WebKitWebExtension *WebExtension;
+WebKitWebProcessExtension *WebExtension;
 extern guint64 page_id;
 
 static void
@@ -14,7 +14,7 @@ extension_initialize(
     WebKitScriptWorld *world,
     WebKitWebPage *web_page,
     WebKitFrame *web_frame,
-    WebKitWebExtension *extension)
+    WebKitWebProcessExtension *extension)
 {
   (void) web_page;
   (void) extension;
@@ -27,7 +27,7 @@ extension_initialize(
 }
 
 void
-web_page_initialize(WebKitWebExtension *extension)
+web_page_initialize(WebKitWebProcessExtension *extension)
 {
   WebExtension = extension;
   g_signal_connect(

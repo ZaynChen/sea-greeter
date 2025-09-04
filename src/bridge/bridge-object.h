@@ -2,7 +2,7 @@
 #define BRIDGE_OBJECT_H 1
 
 #include <jsc/jsc.h>
-#include <webkit2/webkit2.h>
+#include <webkit/webkit.h>
 
 #include "bridge/utils.h"
 #include "browser-web-view.h"

@@ -1,9 +1,7 @@
-#include <webkit2/webkit-web-extension.h>
+#include <webkit/webkit-web-process-extension.h>
 
 #include "lightdm-extension.h"
-#include "logger.h"
 
-#include "extension/greeter_config.h"
 #include "utils/ipc-renderer.h"
 
 gboolean stop_prompts = false;
@@ -102,7 +100,7 @@ web_page_console_message_sent(WebKitWebPage *web_page, WebKitConsoleMessage *con
 }
 
 static void
-web_page_created_callback(WebKitWebExtension *extension, WebKitWebPage *web_page, gpointer user_data)
+web_page_created_callback(WebKitWebProcessExtension *extension, WebKitWebPage *web_page, gpointer user_data)
 {
   (void) extension;
 
@@ -123,10 +121,9 @@ web_page_created_callback(WebKitWebExtension *extension, WebKitWebPage *web_page
 }
 
 G_MODULE_EXPORT void
-webkit_web_extension_initialize_with_user_data(WebKitWebExtension *extension, GVariant *user_data)
+webkit_web_process_extension_initialize_with_user_data(WebKitWebProcessExtension *extension, GVariant *user_data)
 {
   g_variant_ref(user_data);
-
   g_signal_connect(extension, "page-created", G_CALLBACK(web_page_created_callback), user_data);
   web_page_initialize(extension);
 }

@@ -1,11 +1,9 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
 #include <jsc/jsc.h>
 #include <lightdm-gobject-1/lightdm.h>
-#include <webkit2/webkit2.h>
+#include <webkit/webkit.h>
 
 #include "bridge/bridge-object.h"
 #include "bridge/lightdm-objects.h"
@@ -14,7 +12,6 @@
 #include "browser.h"
 #include "lightdm/language.h"
 #include "logger.h"
-#include "settings.h"
 #include "utils/utils.h"
 
 static LightDMGreeter *Greeter;

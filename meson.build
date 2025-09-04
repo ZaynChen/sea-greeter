@@ -1,8 +1,9 @@
 project(
-  'sea-greeter', 'c',
+  'sea-greeter',
+  'c',
   version: '0.1',
   license: 'GPL-3.0-or-later',
-  default_options: ['warning_level=3']
+  default_options: ['warning_level=3'],
 )
 
 as_version = meson.project_version()

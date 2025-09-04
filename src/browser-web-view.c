@@ -1,4 +1,4 @@
-#include <webkit2/webkit2.h>
+#include <webkit/webkit.h>
 
 #include "bridge/greeter_comm.h"
 #include "bridge/greeter_config.h"
@@ -40,35 +40,20 @@ show_console_error_prompt(BrowserWebView *web_view, WebKitUserMessage *user_mess
 
   g_variant_get(params, "(sssu)", &type, &message, &source_id, &line);
 
-  GtkWidget *root_window = gtk_widget_get_toplevel(GTK_WIDGET(web_view));
+  // TODO: haven't test
+  GtkRoot *root = gtk_widget_get_root(GTK_WIDGET(web_view));
+  GtkAlertDialog *adialog = gtk_alert_dialog_new("An error ocurred. Do you want to change to default theme? (gruvbox)");
+  gtk_widget_set_name(GTK_WIDGET(adialog), "error-prompt");
 
-  GtkDialog *dialog = GTK_DIALOG(gtk_dialog_new_with_buttons(
-      "An error ocurred",
-      GTK_WINDOW(root_window),
-      GTK_DIALOG_MODAL,
-      "_Cancel",
-      ERROR_PROMPT_CANCEL,
-      "_Use default theme",
-      ERROR_PROMPT_DEFAULT_THEME,
-      "_Reload theme",
-      ERROR_PROMPT_RELOAD_THEME,
-      NULL));
-
-  gtk_dialog_set_default_response(dialog, ERROR_PROMPT_DEFAULT_THEME);
-
-  GtkBox *content_area = GTK_BOX(gtk_dialog_get_content_area(dialog));
-  GtkWidget *error_occurred = gtk_label_new("An error ocurred. Do you want to change to default theme? (gruvbox)");
+  const char *buttons[] = { "_Cancel", "_Use default theme", "_Reload theme" };
+  gtk_alert_dialog_set_buttons(adialog, buttons);
 
   char *error_message = g_strdup_printf("%s %d: %s", source_id, line, message);
-  GtkWidget *label = gtk_label_new(error_message);
+  gtk_alert_dialog_set_detail(adialog, error_message);
 
-  gtk_container_add(GTK_CONTAINER(content_area), error_occurred);
-  gtk_container_add(GTK_CONTAINER(content_area), label);
-  gtk_widget_show_all(GTK_WIDGET(content_area));
+  gtk_alert_dialog_choose(adialog, GTK_WINDOW(root), NULL, NULL, NULL);
 
-  gtk_widget_set_name(GTK_WIDGET(dialog), "error-prompt");
-  int response = gtk_dialog_run(dialog);
-  gtk_widget_destroy(GTK_WIDGET(dialog));
+  int response = gtk_alert_dialog_choose_finish(adialog, NULL, NULL);
 
   gboolean stop_prompts = false;
 
@@ -76,7 +61,7 @@ show_console_error_prompt(BrowserWebView *web_view, WebKitUserMessage *user_mess
     case ERROR_PROMPT_CANCEL:
       break;
     case ERROR_PROMPT_DEFAULT_THEME:
-      if (!BROWSER_IS_WINDOW(root_window))
+      if (!BROWSER_IS_WINDOW(root))
         break;
       stop_prompts = true;
       g_free(greeter_config->greeter->theme);
@@ -118,10 +103,19 @@ browser_web_view_user_message_received_cb(BrowserWebView *web_view, WebKitUserMe
 
     gtk_widget_grab_focus(GTK_WIDGET(web_view));
 
-    GtkWidget *window = gtk_widget_get_toplevel(GTK_WIDGET(web_view));
-    gtk_widget_show_all(window);
+    // root is Browser
+    GtkRoot *root = gtk_widget_get_root(GTK_WIDGET(web_view));
+    gtk_window_present(GTK_WINDOW(root));
+
+    // the surfacee is NULL before gtk_window_present
+    // the same as gtk_widget_set_cursor_from_name
+    //
+    // GtkNative *native = gtk_widget_get_native(GTK_WIDGET(root));
+    // GdkSurface *surface = gtk_native_get_surface(native);
+    // gdk_surface_set_cursor(surface, gdk_cursor_new_from_name("text", NULL));
+
     priv->loaded = true;
-    logger_debug("Sea greeter started win: %d", gtk_application_window_get_id(GTK_APPLICATION_WINDOW(window)));
+    logger_debug("Sea greeter started win: %d", gtk_application_window_get_id(GTK_APPLICATION_WINDOW(root)));
     return;
   }
 
@@ -143,11 +137,16 @@ browser_web_view_context_menu_cb(
     WebKitHitTestResult *hit_test_result,
     gpointer user_data)
 {
-  (void) webView;
+  // (void) webView;
   (void) context_menu;
   (void) event;
   (void) hit_test_result;
   (void) user_data;
+
+  // GtkRoot *root = gtk_widget_get_root(GTK_WIDGET(webView));
+  // get_menugtk_window_get_application(GTK_WINDOW(root));
+  // GtkPopoverMenu *menu = gtk_popover_menu_new_from_model();
+
   return false;
 }
 
@@ -178,7 +177,6 @@ browser_web_view_constructed(GObject *object)
   g_object_set(G_OBJECT(settings), "allow-universal-access-from-file-urls", true, NULL);
   g_object_set(G_OBJECT(settings), "allow-file-access-from-file-urls", true, NULL);
   g_object_set(G_OBJECT(settings), "enable-page-cache", true, NULL);
-  g_object_set(G_OBJECT(settings), "enable-offline-web-application-cache", true, NULL);
   g_object_set(G_OBJECT(settings), "enable-html5-local-storage", true, NULL);
   g_object_set(G_OBJECT(settings), "enable-webgl", true, NULL);
   g_object_set(G_OBJECT(settings), "hardware-acceleration-policy", WEBKIT_HARDWARE_ACCELERATION_POLICY_ALWAYS, NULL);
