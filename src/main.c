@@ -14,6 +14,26 @@
 #include "bridge/theme_utils.h"
 #include "browser.h"
 
+#ifdef GDK_WINDOWING_X11
+#include <X11/Xlib.h>
+#include <X11/cursorfont.h>
+#include <gdk/x11/gdkx.h>
+#endif
+
+static void
+set_cursor(GdkDisplay *display)
+{
+#ifdef GDK_WINDOWING_X11
+  if (GDK_IS_X11_DISPLAY(display)) {
+    logger_debug("Setup root window cursor: GDK backend is X11");
+    Window root_window = gdk_x11_display_get_xrootwindow(display);
+    Display *xdisplay = gdk_x11_display_get_xdisplay(display);
+    Cursor cursor = XCreateFontCursor(xdisplay, XC_left_ptr);
+    XDefineCursor(xdisplay, root_window, cursor);
+  }
+#endif
+}
+
 extern GreeterConfig *greeter_config;
 
 GPtrArray *greeter_browsers = NULL;
@@ -141,10 +161,11 @@ app_activate_cb(GtkApplication *app, gpointer user_data)
   GdkDisplay *display = gdk_display_get_default();
   GListModel *monitors = gdk_display_get_monitors(display);
 
+  set_cursor(display);
+
   guint n_monitors = g_list_model_get_n_items(monitors);
   gboolean debug_mode = greeter_config->greeter->debug_mode;
 
-  // n_monitors++;
   for (guint i = 0; i < n_monitors; i++) {
     GdkMonitor *monitor = g_list_model_get_item(monitors, i);
     gboolean is_valid = gdk_monitor_is_valid(monitor);
@@ -271,22 +292,6 @@ g_application_parse_args(gint *argc, gchar ***argv)
   load_theme_config();
 }
 
-// static void
-// toplevels_items_changed_cb(GListModel *list, guint position, guint removed, guint added, gpointer user_data)
-// {
-//   (void) position;
-//   (void) removed;
-//   (void) user_data;
-//
-//   if (added > 0) {
-//     // g_warning("toplevels::items-changed: new toplevel added");
-//     for (guint i = 0; i < g_list_model_get_n_items(list); i++) {
-//       GdkToplevel *toplevel = g_list_model_get_item(list, i);
-//       gtk_widget_set_cursor_from_name(GTK_WIDGET(toplevel), "default");
-//     }
-//   }
-// }
-
 int
 main(int argc, char **argv)
 {
@@ -299,10 +304,6 @@ main(int argc, char **argv)
 
   g_signal_connect(app, "activate", G_CALLBACK(app_activate_cb), NULL);
   g_signal_connect(app, "startup", G_CALLBACK(app_startup_cb), NULL);
-
-  // gtk_window_get_toplevels();
-  // GListModel *toplevels = gtk_window_get_toplevels();
-  // g_signal_connect(toplevels, "items-changed", G_CALLBACK(toplevels_items_changed_cb), NULL);
 
   g_application_parse_args(&argc, &argv);
 

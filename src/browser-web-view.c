@@ -103,16 +103,8 @@ browser_web_view_user_message_received_cb(BrowserWebView *web_view, WebKitUserMe
 
     gtk_widget_grab_focus(GTK_WIDGET(web_view));
 
-    // root is Browser
     GtkRoot *root = gtk_widget_get_root(GTK_WIDGET(web_view));
     gtk_window_present(GTK_WINDOW(root));
-
-    // the surfacee is NULL before gtk_window_present
-    // the same as gtk_widget_set_cursor_from_name
-    //
-    // GtkNative *native = gtk_widget_get_native(GTK_WIDGET(root));
-    // GdkSurface *surface = gtk_native_get_surface(native);
-    // gdk_surface_set_cursor(surface, gdk_cursor_new_from_name("text", NULL));
 
     priv->loaded = true;
     logger_debug("Sea greeter started win: %d", gtk_application_window_get_id(GTK_APPLICATION_WINDOW(root)));
@@ -131,21 +123,15 @@ browser_web_view_user_message_received_cb(BrowserWebView *web_view, WebKitUserMe
 }
 static gboolean
 browser_web_view_context_menu_cb(
-    WebKitWebView *webView,
+    WebKitWebView *webview,
     WebKitContextMenu *context_menu,
-    GdkEvent *event,
     WebKitHitTestResult *hit_test_result,
     gpointer user_data)
 {
-  // (void) webView;
+  (void) webview;
   (void) context_menu;
-  (void) event;
   (void) hit_test_result;
   (void) user_data;
-
-  // GtkRoot *root = gtk_widget_get_root(GTK_WIDGET(webView));
-  // get_menugtk_window_get_application(GTK_WINDOW(root));
-  // GtkPopoverMenu *menu = gtk_popover_menu_new_from_model();
 
   return false;
 }

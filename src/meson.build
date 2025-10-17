@@ -24,6 +24,7 @@ web_extension_sources = [
 gtk4 = dependency('gtk4', version: '>=4.18')
 webkit = dependency('webkitgtk-6.0', version: '>=2.48')
 webkit_webext = dependency('webkitgtk-web-process-extension-6.0', version: '>=2.48')
+x11 = dependency('x11')
 
 yaml = dependency('yaml-0.1', version: '>=0.2')
 lightdm = dependency('liblightdm-gobject-1')
@@ -69,7 +70,7 @@ greeter_sources += gnome.compile_resources('sea_greeter-resources', 'sea-greeter
 greeter = executable(
   'sea-greeter',
   greeter_sources,
-  dependencies: [webkit, gtk4, yaml, lightdm],
+  dependencies: [webkit, gtk4, yaml, lightdm, x11],
   install: true,
 )
 
