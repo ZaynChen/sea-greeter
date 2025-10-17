@@ -295,7 +295,7 @@ load_theme(Browser *browser)
 
   char *theme = NULL;
 
-  if (browser->is_valid) {
+  if (browser->is_primary) {
     theme = g_strdup(primary_html);
   } else {
     theme = g_strdup(secondary_html);

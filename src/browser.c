@@ -16,7 +16,7 @@ typedef enum {
   PROP_ID = 1,
   PROP_MONITOR,
   PROP_DEBUG_MODE,
-  PROP_IS_VALID,
+  PROP_IS_PRIMARY,
   N_PROPERTIES,
 } BrowserProperty;
 
@@ -26,21 +26,12 @@ static void
 browser_dispose(GObject *gobject)
 {
   G_OBJECT_CLASS(browser_parent_class)->dispose(gobject);
+  // remove the reference of browser in greeter_browsers
+  g_ptr_array_remove(greeter_browsers, gobject);
 }
 static void
 browser_finalize(GObject *gobject)
 {
-  // It is possible that object methods might be invoked
-  // after dispose is run and before finalize runs
-  //
-  // Widgets in GTK 4 are treated like any other objects
-  // - their parent widget holds a reference on them,
-  // and GTK holds a reference on toplevel windows.
-  // gtk_window_destroy() will drop the reference on the toplevel window,
-  // and cause the whole widget hierarchy to be finalized
-  // unless there are other references that keep widgets alive.
-  gtk_window_destroy(GTK_WINDOW(gobject));
-  g_ptr_array_remove(greeter_browsers, gobject);
   G_OBJECT_CLASS(browser_parent_class)->finalize(gobject);
 }
 
@@ -94,7 +85,7 @@ browser_initiate_metadata(Browser *self)
   BrowserPrivate *priv = browser_get_instance_private(self);
 
   self->meta.id = priv->id;
-  self->meta.is_valid = self->is_valid;
+  self->meta.is_primary = self->is_primary;
 
   // a number of GtkWindow APIs that were X11-specific have been removed.
   // includes gtk_window_set_position()
@@ -182,8 +173,8 @@ browser_set_property(GObject *object, guint property_id, const GValue *value, GP
     case PROP_DEBUG_MODE:
       self->debug_mode = g_value_get_boolean(value);
       break;
-    case PROP_IS_VALID:
-      self->is_valid = g_value_get_boolean(value);
+    case PROP_IS_PRIMARY:
+      self->is_primary = g_value_get_boolean(value);
       break;
     default:
       break;
@@ -206,8 +197,8 @@ browser_get_property(GObject *object, guint property_id, GValue *value, GParamSp
     case PROP_DEBUG_MODE:
       g_value_set_boolean(value, self->debug_mode);
       break;
-    case PROP_IS_VALID:
-      g_value_set_boolean(value, self->is_valid);
+    case PROP_IS_PRIMARY:
+      g_value_set_boolean(value, self->is_primary);
       break;
     default:
       break;
@@ -243,10 +234,10 @@ browser_class_init(BrowserClass *klass)
       false,
       G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE);
 
-  browser_properties[PROP_IS_VALID] = g_param_spec_boolean(
-      "is_valid",
-      "IsValid",
-      "Whether the browser is in a valid monitor or not",
+  browser_properties[PROP_IS_PRIMARY] = g_param_spec_boolean(
+      "is_primary",
+      "IsPrimary",
+      "Whether the browser is in a primary monitor or not",
       true,
       G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE);
 
@@ -257,7 +248,7 @@ static void
 browser_init(Browser *self)
 {
   self->web_view = browser_web_view_new();
-  self->is_valid = true;
+  self->is_primary = true;
 
   gtk_window_set_child(GTK_WINDOW(self), GTK_WIDGET(self->web_view));
 }
@@ -269,7 +260,7 @@ browser_new(GtkApplication *app, GdkMonitor *monitor)
   return browser;
 }
 Browser *
-browser_new_full(GtkApplication *app, GdkMonitor *monitor, gboolean debug_mode, gboolean is_valid)
+browser_new_full(GtkApplication *app, GdkMonitor *monitor, gboolean debug_mode, gboolean is_primary)
 {
   Browser *browser = g_object_new(
       BROWSER_TYPE,
@@ -279,8 +270,8 @@ browser_new_full(GtkApplication *app, GdkMonitor *monitor, gboolean debug_mode, 
       monitor,
       "debug_mode",
       debug_mode,
-      "is_valid",
-      is_valid,
+      "is_primary",
+      is_primary,
       NULL);
   return browser;
 }

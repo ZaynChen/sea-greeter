@@ -14,6 +14,8 @@
 #include "bridge/theme_utils.h"
 #include "browser.h"
 
+#define PRIMARY_MONITOR 0
+
 #ifdef GDK_WINDOWING_X11
 #include <X11/Xlib.h>
 #include <X11/cursorfont.h>
@@ -135,7 +137,6 @@ initialize_actions(GtkApplication *app)
 
   g_action_map_add_action_entries(G_ACTION_MAP(app), app_entries, G_N_ELEMENTS(app_entries), app);
 }
-
 /*
  * Callback to be executed when app is activated.
  * Occurs after ":startup"
@@ -168,13 +169,8 @@ app_activate_cb(GtkApplication *app, gpointer user_data)
 
   for (guint i = 0; i < n_monitors; i++) {
     GdkMonitor *monitor = g_list_model_get_item(monitors, i);
-    gboolean is_valid = gdk_monitor_is_valid(monitor);
-    if (n_monitors == 1)
-      is_valid = true;
-    // GdkMonitor *monitor = gdk_display_get_monitor(display, 0);
-    // gboolean is_primary = i == 0;
-
-    Browser *browser = browser_new_full(app, monitor, debug_mode, is_valid);
+    gboolean is_primary = i == PRIMARY_MONITOR;
+    Browser *browser = browser_new_full(app, monitor, debug_mode, is_primary);
     g_ptr_array_add(greeter_browsers, browser);
 
     load_theme(browser);

@@ -49,7 +49,7 @@ GreeterComm_window_metadata_cb(GPtrArray *arguments, BrowserWebView *web_view)
 
   JSCValue *value = jsc_value_new_object(context, NULL, NULL);
   jsc_value_object_set_property(value, "id", jsc_value_new_number(context, meta.id));
-  jsc_value_object_set_property(value, "is_primary", jsc_value_new_boolean(context, meta.is_valid));
+  jsc_value_object_set_property(value, "is_primary", jsc_value_new_boolean(context, meta.is_primary));
 
   JSCValue *position = jsc_value_new_object(context, NULL, NULL);
   jsc_value_object_set_property(position, "x", jsc_value_new_number(context, meta.geometry.x));

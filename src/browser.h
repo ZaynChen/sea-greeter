@@ -14,7 +14,7 @@ typedef struct {
 
 typedef struct {
   guint64 id;
-  gboolean is_valid;
+  gboolean is_primary;
   GdkRectangle geometry;
   OverallBoundary overall_boundary;
 } WindowMetadata;
@@ -30,13 +30,13 @@ struct _Browser {
   BrowserWebView *web_view;
   GdkMonitor *monitor;
   gboolean debug_mode;
-  gboolean is_valid;
+  gboolean is_primary;
   WindowMetadata meta;
 };
 
 void browser_set_overall_boundary(GPtrArray *browsers);
 Browser *browser_new(GtkApplication *app, GdkMonitor *monitor);
-Browser *browser_new_full(GtkApplication *app, GdkMonitor *monitor, gboolean debug_mode, gboolean is_valid);
+Browser *browser_new_full(GtkApplication *app, GdkMonitor *monitor, gboolean debug_mode, gboolean is_primary);
 void browser_show_menu_bar(Browser *browser, gboolean show);
 
 G_END_DECLS
