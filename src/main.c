@@ -160,13 +160,27 @@ app_activate_cb(GtkApplication *app, gpointer user_data)
   greeter_browsers = g_ptr_array_new();
 
   GdkDisplay *display = gdk_display_get_default();
-  GListModel *monitors = gdk_display_get_monitors(display);
-
+  // The cascading part of GTK’s CSS implementation is complicated by the existence
+  // of local stylesheets (i.e. those added with gtk_style_context_add_provider()).
+  // And local stylesheets are unintuitive in that they do not apply to the whole
+  // subtree of widgets, but just to the one widget where the stylesheet was added.
+  //
+  // GTK 5 will no longer provide this functionality. The recommendation is to use
+  // a global stylesheet (i.e. gtk_style_context_add_provider_for_display())
+  // and rely on style classes to make your CSS apply only where desired.
+  GtkCssProvider *provider = gtk_css_provider_new();
+  gtk_css_provider_load_from_resource(provider, "/com/github/jezerm/sea_greeter/resources/style.css");
+  gtk_style_context_add_provider_for_display(
+      display,
+      GTK_STYLE_PROVIDER(provider),
+      GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+  g_object_unref(provider);
   set_cursor(display);
 
-  guint n_monitors = g_list_model_get_n_items(monitors);
   gboolean debug_mode = greeter_config->greeter->debug_mode;
 
+  GListModel *monitors = gdk_display_get_monitors(display);
+  guint n_monitors = g_list_model_get_n_items(monitors);
   for (guint i = 0; i < n_monitors; i++) {
     GdkMonitor *monitor = g_list_model_get_item(monitors, i);
     gboolean is_primary = i == PRIMARY_MONITOR;

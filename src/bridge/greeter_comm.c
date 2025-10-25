@@ -34,14 +34,7 @@ GreeterComm_window_metadata_cb(GPtrArray *arguments, BrowserWebView *web_view)
 {
   (void) arguments;
   JSCContext *context = get_global_context();
-  Browser *browser = NULL;
-  for (guint i = 0; i < greeter_browsers->len; i++) {
-    Browser *b = greeter_browsers->pdata[i];
-    if (b->web_view == web_view) {
-      browser = b;
-      break;
-    }
-  }
+  Browser *browser = BROWSER_WINDOW(gtk_widget_get_parent(GTK_WIDGET(web_view)));
   if (browser == NULL) {
     return NULL;
   }

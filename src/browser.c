@@ -135,16 +135,6 @@ browser_constructed(GObject *object)
 
   gtk_window_set_default_size(GTK_WINDOW(browser), geometry.width, geometry.height);
 
-  GtkCssProvider *provider = gtk_css_provider_new();
-  gtk_css_provider_load_from_resource(provider, "/com/github/jezerm/sea_greeter/resources/style.css");
-  GdkDisplay *display = gdk_monitor_get_display(browser->monitor);
-  gtk_style_context_add_provider_for_display(
-      display,
-      GTK_STYLE_PROVIDER(provider),
-      GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
-
-  g_object_unref(provider);
-
   g_action_map_add_action_entries(G_ACTION_MAP(browser), win_entries, G_N_ELEMENTS(win_entries), browser);
 
   priv->id = browser_gen_id(browser);
