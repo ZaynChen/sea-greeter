@@ -1,21 +1,18 @@
 configure_file(output: 'config.h', configuration: conf)
 
 web_extension_sources = [
-  'extensions.c',
-  'lightdm-extension.c',
-  'settings.c',
   'utils/ipc-renderer.c',
+  'utils/jsc-utils.c',
   'utils/utils.c',
 
-  'extension/lightdm.c',
-  'extension/lightdm-signal.c',
-  'extension/greeter_config.c',
-  'extension/theme_utils.c',
-  'extension/greeter_comm.c',
+  'webext/extensions.c',
+  'webext/lightdm-extension.c',
 
-  'bridge/lightdm-objects.c',
-  'bridge/utils.c',
-  #'bridge/lightdm-signal.c',
+  'webext/extension/lightdm.c',
+  'webext/extension/lightdm-signal.c',
+  'webext/extension/greeter_config.c',
+  'webext/extension/theme_utils.c',
+  'webext/extension/greeter_comm.c',
 ]
 
 # gtk3 = dependency('gtk+-3.0', version: '>=3.24')
@@ -41,26 +38,24 @@ pkg_mod = import('pkgconfig')
 pkg_mod.generate(web_extension, description: 'webkit6-greeter-webext')
 
 greeter_sources = [
-  'main.c',
-  'settings.c',
-  'theme.c',
-
-  'browser.c',
-  'browser-web-view.c',
-  'browser-commands.c',
-
-  'utils/ipc-main.c',
   'utils/utils.c',
+  'utils/jsc-utils.c',
 
-  'bridge/lightdm.c',
-  'bridge/greeter_config.c',
-  'bridge/theme_utils.c',
-  'bridge/greeter_comm.c',
+  'greeter/main.c',
+  'greeter/settings.c',
+  'greeter/theme.c',
 
-  'bridge/utils.c',
-  'bridge/bridge-object.c',
-  #'bridge/lightdm-signal.c',
-  'bridge/lightdm-objects.c',
+  'greeter/browser.c',
+  'greeter/browser-web-view.c',
+  'greeter/browser-commands.c',
+
+  'greeter/bridge/lightdm.c',
+  'greeter/bridge/greeter_config.c',
+  'greeter/bridge/theme_utils.c',
+  'greeter/bridge/greeter_comm.c',
+
+  'greeter/bridge/bridge-object.c',
+  'greeter/bridge/lightdm-objects.c',
 ]
 
 gnome = import('gnome')

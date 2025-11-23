@@ -6,7 +6,7 @@
 
 #include <webkit/webkit-web-process-extension.h>
 
-#include "utils/utils.h"
+#include "utils/jsc-utils.h"
 
 typedef struct {
   gboolean received;
